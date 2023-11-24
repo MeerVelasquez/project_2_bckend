@@ -1,13 +1,15 @@
 const express = require('express');
 const port = 3000;
-const passport = require('passport');
-const passportJWT = require('passport-jwt');
+
+const jwt = require('jsonwebtoken');
 const app = express();
 const bcrypt = require('bcrypt');
-const router = express.Router();
+// const router = express.Router();
 const mongoose = require("mongoose");
-const JWTStrategy = passportJWT.Strategy;
-const ExtractJWT = passportJWT.ExtractJwt;
+const { config } = require('dotenv');
+config();
+
+
 const Skey = 'ojoazul'
 // const User = require('./models/user'); // Replace with your user model
 // Configura la conexión a la base de datos
@@ -18,31 +20,12 @@ mongoose.connect("mongodb://localhost/db_Proyecto2", {
 
 const db = mongoose.connection;
 app.use(express.json());
-// passport.use(
-//   new JWTStrategy(
-//     {
-//       jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-//       secretOrKey: Skey,
-//     },
-//     (jwtPayload, done) => {
-//       // Check if the user exists in the database
-//       User.findById(jwtPayload.id, (err, user) => {
-//         if (err) {
-//           return done(err, false);
-//         }
-//         if (user) {
-//           return done(null, user);
-//         } else {
-//           return done(null, false);
-//         }
-//       });
-//     }
-//   )
-// );
+
 db.on("error", console.error.bind(console, "Error de conexión a la base de datos:"));
 db.once("open", async () => {
   console.log("Conexión a la base de datos exitosa.");
-
+  
+});   
   // Definir modelos y esquemas para colecciones
   const usuarioSchema = new mongoose.Schema({
     nombre: String,
@@ -90,11 +73,17 @@ db.once("open", async () => {
   });
   
 // Función para generar el token JWT
-function generateToken(usuarioId) {
-  const secretKey = secretOrKey; // Reemplaza esto con una clave secreta real
-  return jwt.sign({ usuarioId }, secretKey, { expiresIn: '1h' });
-}
-  
+const authenticateJWT = (req, res, next) => {
+  const token = req.header('Authorization');
+  console.log(token)
+  if (!token) return res.status(401).json({ error: 'No autorizado' });
+
+  jwt.verify(token, Skey, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token inválido' });
+    req.user = user;
+    next();
+  });
+};
   const pedidoSchema = new mongoose.Schema({
     usuarioId: mongoose.Schema.Types.ObjectId,
     restauranteId: mongoose.Schema.Types.ObjectId,
@@ -125,6 +114,7 @@ function generateToken(usuarioId) {
 
 
   // CRUD Usuario
+  // CREATE un usuario
   app.post('/usuarios', async (req, res) => {
     try {
       const { nombre, correoElectronico, contrasena, numeroCelular, direccion, rol } = req.body;
@@ -135,7 +125,7 @@ function generateToken(usuarioId) {
       // Instancia de modelo usuario
       const nuevoUsuario = new Usuario({
         nombre,
-        correoElectronico,
+        correoElectronico,  
         contrasena: hashcontrasena, // Guarda la contrasena en hash
         numeroCelular,
         direccion,
@@ -151,7 +141,7 @@ function generateToken(usuarioId) {
       res.status(500).json({ error: 'Error al crear el usuario' });
     }
   });
-  // READ usuario por ID o correo&contrasena
+  // READ usuario por ID o correo&contrasena 
   app.post('/usuarios/login', async (req, res) => {
     const { correoElectronico, contrasena, _id } = req.body;
   
@@ -189,7 +179,7 @@ function generateToken(usuarioId) {
   });
   
 // UPDATE usuario dado un id.
-app.put('/usuarios/:id', async (req, res) => {
+app.put('/usuarios/:id', authenticateJWT, async (req, res) => {
   const { id } = req.params;
   const { nombre, correoElectronico, contrasena, numeroCelular, direccion, rol } = req.body;
 
@@ -197,16 +187,17 @@ app.put('/usuarios/:id', async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'ID de usuario no válido' });
   }
-
   try {
-    const usuario = await Usuario.findByIdAndUpdate(id, {
-      nombre,
-      correoElectronico,
-      contrasena,
-      numeroCelular,
-      direccion,
-      rol
-    }, { new: true });
+    // // Verificar si el usuario tiene permisos para realizar la actualización
+    // if (req.user.rol !== 'admin' && req.user._id !== id) {
+    //   return res.status(403).json({ error: 'No tienes permisos para realizar esta acción' });
+    // }
+
+    const usuario = await Usuario.findByIdAndUpdate(
+      id,
+      { nombre, correoElectronico, contrasena, numeroCelular, direccion, rol },
+      { new: true }
+    );
 
     if (!usuario) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -633,5 +624,3 @@ app.get('/pedidos/filtrados', async (req, res) => {
     }
   });
   
-  
-});   
