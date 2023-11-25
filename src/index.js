@@ -8,8 +8,13 @@ const bcrypt = require('bcrypt');
 const mongoose = require("mongoose");
 const { config } = require('dotenv');
 config();
-
-
+// TODO:
+// ** EN [] LOS REQUISITOS FUNCIONALES
+// CREATE restaurante teniendo en mente [3,4]
+// Añadir Two-Factor Authentication [7]
+// Modular
+// README
+// Validaciones de HABILITADO [que se compruebe que si es FALSE i.e que no pueda hacer login y otras funcionalidades.]
 const Skey = 'ojoazul'
 // const User = require('./models/user'); // Replace with your user model
 // Configura la conexión a la base de datos
@@ -209,7 +214,7 @@ app.put('/usuarios/:id', authenticateJWT, async (req, res) => {
   }
 });
 // DELETE inhabilitar usuario.
-app.patch('/usuarios/:id/deshabilitar', async (req, res) => {
+app.patch('/usuarios/:id/deshabilitar', authenticateJWT, async (req, res) => {
   const usuarioId = req.params.id;
 
   try {
@@ -284,8 +289,8 @@ app.patch('/usuarios/:id/deshabilitar', async (req, res) => {
   });
 
 
-  // UPDATE modifica los datos del usuario que corresponde a la id proveída.
-  app.put('/restaurantes/:id', async (req, res) => {
+  // UPDATE modifica los datos del RESTAURANTE que corresponde a la id proveída.
+  app.put('/restaurantes/:id', authenticateJWT, async (req, res) => { 
     const restauranteId = req.params.id;
     const { nombre, categoria, popularidad } = req.body;
   
@@ -313,7 +318,7 @@ app.patch('/usuarios/:id/deshabilitar', async (req, res) => {
     }
   });
   // DELETE deshabilita un restaurante basado en la id proveída.
-app.patch('/restaurantes/:id/deshabilitar', async (req, res) => {
+app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) => {
   const restauranteId = req.params.id;
   try {
     const restaurante = await Restaurante.findById(restauranteId);
@@ -339,7 +344,7 @@ app.patch('/restaurantes/:id/deshabilitar', async (req, res) => {
   });
   // CRUD productos
   // CREATE un producto
-  app.post('/productos', async (req, res) => {
+  app.post('/productos', authenticateJWT, async (req, res) => {
     try {
       const { nombre, descripcion, precio, restauranteId } = req.body;
   
@@ -372,7 +377,7 @@ app.patch('/restaurantes/:id/deshabilitar', async (req, res) => {
   // READ un producto basado en su id.
 
   });
-  app.get('/productos/busqueda', async (req, res) => { // Por algun motivo usar /productos/busqueda no funciona
+  app.get('/productos/busqueda', async (req, res) => { 
     try {
       const { restauranteId, categoria } = req.query;
       let query = {};
@@ -424,7 +429,7 @@ app.patch('/restaurantes/:id/deshabilitar', async (req, res) => {
   
   
   // UPDATE modifica los datos del producto que corresponde a la id proveída, usando los datos proveídos
-  app.put('/productos/:id', async (req, res) => {
+  app.put('/productos/:id',  authenticateJWT, async (req, res) => {
     try {
       const productoId = req.params.id;
       const { nombre, descripcion, precio, categoria, restauranteId } = req.body;
@@ -458,7 +463,7 @@ app.patch('/restaurantes/:id/deshabilitar', async (req, res) => {
   });
   // DELETE “inhabilita” un producto que corresponde a la id proveída.
 
-  app.patch('/productos/:id/inhabilitar', async (req, res) => {
+  app.patch('/productos/:id/inhabilitar', authenticateJWT, async (req, res) => {
     try {
       const productoId = req.params.id;
   
@@ -486,8 +491,9 @@ app.patch('/restaurantes/:id/deshabilitar', async (req, res) => {
     }
   });
   // CRUD de Pedidos
+  // [PENDIENTE!]
   // CREATE crea un pedido de un usuario a un restaurante en la base de datos con los datos enviados al backend
-  app.post('/pedidos', async (req, res) => {
+  app.post('/pedidos', authenticateJWT,   async (req, res) => { // Punto 3: [Solo] debe recibir el ID del administrador del JWT. Se asume que son aquellos usuarios admin. 
     try {
       const { usuarioId, restauranteId, productos, total, estado } = req.body;
 
@@ -570,7 +576,7 @@ app.get('/pedidos/filtrados', async (req, res) => {
   });
   // UPDATE pedido por su ID
   
-  app.put('/pedidos/:id', async (req, res) => {
+  app.put('/pedidos/:id', authenticateJWT, async (req, res) => {
     try {
       const pedidoId = req.params.id;
       const { productos, total, estado } = req.body;
@@ -601,7 +607,7 @@ app.get('/pedidos/filtrados', async (req, res) => {
     }
   });
   // DELETE El endpoint “inhabilita” un producto que corresponde a la id proveída.
-  app.put('/pedidos/inhabilitar/:id', async (req, res) => {
+  app.put('/pedidos/inhabilitar/:id', authenticateJWT, async (req, res) => {
     try {
       const pedidoId = req.params.id;
   
