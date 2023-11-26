@@ -1,6 +1,5 @@
 const express = require('express');
 const port = 3000;
-
 const jwt = require('jsonwebtoken');
 const app = express();
 const bcrypt = require('bcrypt');
@@ -76,19 +75,50 @@ db.once("open", async () => {
       default: true  // Valor por defecto es habilitado (true)
     }  // Referencia al restaurante al que pertenece
   });
-  
+// Probando para [3,4]
+  const extractUserIdFromToken = async (token) => {
+    try {
+      const decoded = await jwt.verify(token, Skey);
+      return decoded.userId;
+    } catch (error) {
+      console.error('Error decoding token:', error.message);
+      return null;
+    }
+  };
 // Función para generar el token JWT
+const generateToken = (userId) => {
+  const token = jwt.sign({ userId }, Skey, { expiresIn: '1h' }); 
+  return token;
+};
+
+// Middleware de autenticacion JWT  
 const authenticateJWT = (req, res, next) => {
   const token = req.header('Authorization');
-  console.log(token)
-  if (!token) return res.status(401).json({ error: 'No autorizado' });
 
-  jwt.verify(token, Skey, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token inválido' });
-    req.user = user;
+  if (!token || !token.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Formato de token no válido' });
+  }
+
+  const tokenValue = token.split(' ')[1];
+
+  jwt.verify(tokenValue, Skey, (err, decoded) => {
+    if (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(403).json({ error: 'Token expirado' });
+      }
+      return res.status(403).json({ error: 'Token inválido' });
+    }
+
+    req.user = {
+      userId: decoded.userId,
+    };
+
     next();
   });
 };
+
+
+// Schemas
   const pedidoSchema = new mongoose.Schema({
     usuarioId: mongoose.Schema.Types.ObjectId,
     restauranteId: mongoose.Schema.Types.ObjectId,
@@ -157,8 +187,11 @@ const authenticateJWT = (req, res, next) => {
           return res.status(404).json({ error: 'Usuario no encontrado' });
         }
         
-        
-        return res.json({ usuario });
+        const token = generateToken(usuario._id);
+        console.log('Generated Token:', token);
+    
+        // Send the token to the client, e.g., in the response body
+        return res.json({ token });
       } catch (err) {
         return res.status(500).json({ error: 'Error al buscar el usuario' });
       }
@@ -172,7 +205,7 @@ const authenticateJWT = (req, res, next) => {
         if (!check) {
           return res.status(404).json({ error: 'Usuario no encontrado o contrasena incorrecta' });
         }
-        const token = jwt.sign({ usuarioId: usuario._id }, Skey, { expiresIn: '1h' });
+        const token = generateToken(usuario._id);
         console.log(token)
         return res.json({ usuario, token });
       } catch (err) {
@@ -192,17 +225,33 @@ app.put('/usuarios/:id', authenticateJWT, async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'ID de usuario no válido' });
   }
+
   try {
-    // // Verificar si el usuario tiene permisos para realizar la actualización
+    // Verificar permisos (descomentar según sea necesario)
     // if (req.user.rol !== 'admin' && req.user._id !== id) {
     //   return res.status(403).json({ error: 'No tienes permisos para realizar esta acción' });
     // }
 
-    const usuario = await Usuario.findByIdAndUpdate(
-      id,
-      { nombre, correoElectronico, contrasena, numeroCelular, direccion, rol },
-      { new: true }
-    );
+    // Hashear la contraseña si se proporciona
+    let hashedContrasena;
+    if (contrasena) {
+      const saltRounds = 10; // Número de rondas para la generación de la sal
+      hashedContrasena = await bcrypt.hash(contrasena, saltRounds);
+    }
+
+    // Construir objeto de actualización excluyendo campos undefined
+    const updateFields = {
+      nombre,
+      correoElectronico,
+      contrasena: hashedContrasena,
+      numeroCelular,
+      direccion,
+      rol,
+    };
+    const filteredUpdateFields = Object.fromEntries(Object.entries(updateFields).filter(([_, v]) => v !== undefined));
+
+    // Actualizar el usuario
+    const usuario = await Usuario.findByIdAndUpdate(id, filteredUpdateFields, { new: true });
 
     if (!usuario) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -210,6 +259,7 @@ app.put('/usuarios/:id', authenticateJWT, async (req, res) => {
 
     return res.json(usuario);
   } catch (err) {
+    console.error('Error al actualizar el usuario:', err);
     return res.status(500).json({ error: 'Error al actualizar el usuario' });
   }
 });
@@ -238,10 +288,52 @@ app.patch('/usuarios/:id/deshabilitar', authenticateJWT, async (req, res) => {
   }
 });
 
-  
-  
+// Middleware de revisar si el usuario es admin
+const isAdmin = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const user = await Usuario.findById(userId);
+
+    if (!user || user.rol !== 'admin') {
+      return res.status(403).json({ error: 'No tienes permisos de administrador' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return res.status(500).json({ error: 'Error checking admin status' });
+  }
+};
+
+
+
+
   
   // CRUD Restaurante
+     // CREATE 
+
+app.post('/restaurantes', authenticateJWT, isAdmin, async (req, res) => {
+  console.log('User Object:', req.user);
+  const { nombre, categoria, popularidad } = req.body;
+  
+  try {
+
+    const restaurante = new Restaurante({
+      nombre,
+      categoria,
+      popularidad,
+    });
+
+    await restaurante.save();
+    return res.status(201).json({ mensaje: 'Restaurante creado con éxito' });
+  } catch (error) {
+    console.error('Error al crear el restaurante:', error);
+    return res.status(500).json({ error: 'Error al crear el restaurante' });
+  }
+});
+
+
+
     // READ retorna restaurantes que pertenezcan a la categoría proveída y/o su nombre se asemeje a la búsqueda.
     app.get('/restaurantes/busqueda', async (req, res) => {
       try {
