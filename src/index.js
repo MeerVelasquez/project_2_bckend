@@ -5,6 +5,7 @@ const app = express();
 const bcrypt = require('bcrypt');
 // const router = express.Router();
 const mongoose = require("mongoose");
+const speakeasy = require('speakeasy');
 const { config } = require('dotenv');
 config();
 // TODO:
@@ -15,7 +16,7 @@ config();
 // README
 // Validaciones de HABILITADO [que se compruebe que si es FALSE i.e que no pueda hacer login y otras funcionalidades.]
 const Skey = 'ojoazul'
-// const User = require('./models/user'); // Replace with your user model
+
 // Configura la conexión a la base de datos
 mongoose.connect("mongodb://localhost/db_Proyecto2", {
   useNewUrlParser: true,
@@ -48,7 +49,12 @@ db.once("open", async () => {
     habilitado: {
       type: Boolean,
       default: true  // Valor por defecto es habilitado (true)
-    }  // Campo para habilitar/deshabilitar al usuario
+    },
+    isTwoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorSecret: String, // Store the base32-encoded secret for TOTP
   });
   
 
@@ -90,6 +96,92 @@ const generateToken = (userId) => {
   const token = jwt.sign({ userId }, Skey, { expiresIn: '1h' }); 
   return token;
 };
+// Middlewares
+// Middleware de 2FA con speakeasy
+const generateSecret = () => {
+  // Generar un secreto para el usuario (esto debería almacenarse de forma segura en la base de datos)
+  return speakeasy.generateSecret({ length: 20 });
+};
+
+const enableTwoFactor = async (userId, secret) => {
+  try {
+    // Update user in the database to enable 2FA
+    const user = await Usuario.findByIdAndUpdate(
+      userId,
+      { $set: { isTwoFactorEnabled: true, twoFactorSecret: secret } },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return user;
+  } catch (error) {
+    console.error('Error enabling 2FA for user:', error);
+    throw new Error('Error enabling 2FA');
+  }
+};
+
+
+function verifyTwoFactorToken(userSecret, twoFactorToken) {
+  // Verify the token
+  const verificationResult = speakeasy.totp.verify({
+    secret: userSecret,
+    token: twoFactorToken,
+  });
+
+  // Return the verification result
+  return verificationResult;
+}
+
+const middleware = async (req, res, next) => {
+  try {
+    console.log('Request Body:', req.body); // Log the request body
+
+    const { correoElectronico, contrasena, twoFactorToken } = req.body;
+
+    // Check if email and password are provided
+    if (!correoElectronico || !contrasena) {
+      return res.status(400).json({ error: 'Correo electrónico y contraseña son obligatorios' });
+    }
+
+    // Find the user by email and password
+    const user = await Usuario.findOne({ correoElectronico: correoElectronico });
+    
+    if (!user || !user.isTwoFactorEnabled) {
+      // Continue without 2FA verification
+      console.log('User not found or 2FA not enabled, skipping 2FA verification');
+      req.user = user;
+      return next();
+    }
+
+    // Password verification
+    const isPasswordValid = await bcrypt.compare(contrasena, user.contrasena);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid email or password.' });
+    }
+
+    // 2FA verification
+    console.log('Verifying 2FA token:', twoFactorToken);
+    console.log(user.twoFactorSecret)
+    // const isTokenValid = verifyTwoFactorToken(user.twoFactorSecret, twoFactorToken);
+    const isTokenValid = user.twoFactorSecret === twoFactorToken;
+    if (isTokenValid) {
+      req.user = user;
+      console.log('2FA token is valid, proceeding with the request');
+      return next();
+    } else {
+      console.log('Invalid 2FA token');
+      return res.status(401).json({ message: 'Invalid 2FA token.' });
+    }
+  } catch (error) {
+    console.error('Error in middleware:', error);
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+};
+
 
 // Middleware de autenticacion JWT  
 const authenticateJWT = (req, res, next) => {
@@ -117,6 +209,45 @@ const authenticateJWT = (req, res, next) => {
   });
 };
 
+// Endpoint to generate a new 2FA secret for a user
+app.post('/usuarios/generate-2fa-secret/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Ensure userId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: 'Invalid userId' });
+    }
+
+    // Call the function to generate the 2FA secret
+    const result = await generateAndEnableTwoFactor(userId);
+
+    // Send the response with the generated secret and updated user details
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating 2FA secret:', error);
+    res.status(500).json({ error: 'Error generating 2FA secret' });
+  }
+});
+
+// Function to generate and enable 2FA for a user
+const generateAndEnableTwoFactor = async (userId) => {
+  try {
+    // Generate 2FA secret
+    const secret = generateSecret();
+
+    // Enable 2FA for the user
+    const user = await enableTwoFactor(userId, secret.base32);
+
+    // Return the secret and updated user details
+    return { secret: secret.otpauth_url, user };
+  } catch (error) {
+    console.error('Error enabling 2FA for user:', error);
+    throw new Error('Error generating 2FA secret');
+  }
+};
+
+// Function to enable 2FA for a user
 
 // Schemas
   const pedidoSchema = new mongoose.Schema({
@@ -177,8 +308,8 @@ const authenticateJWT = (req, res, next) => {
     }
   });
   // READ usuario por ID o correo&contrasena 
-  app.post('/usuarios/login', async (req, res) => {
-    const { correoElectronico, contrasena, _id } = req.body;
+  app.post('/usuarios/login', middleware, async (req, res) => {
+    const { correoElectronico, contrasena, _id, twoFactorToken } = req.body;
   
     if (mongoose.Types.ObjectId.isValid(_id)) {
       try {
@@ -186,10 +317,10 @@ const authenticateJWT = (req, res, next) => {
         if (!usuario) {
           return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-        
+  
         const token = generateToken(usuario._id);
         console.log('Generated Token:', token);
-    
+  
         // Send the token to the client, e.g., in the response body
         return res.json({ token });
       } catch (err) {
@@ -199,14 +330,27 @@ const authenticateJWT = (req, res, next) => {
       try {
         const usuario = await Usuario.findOne({ correoElectronico: correoElectronico });
         console.log(usuario);
-        const check = await bcrypt.compare(contrasena, usuario.contrasena)
-        console.log(check)
-        
+  
+        const check = await bcrypt.compare(contrasena, usuario.contrasena);
+        console.log(check);
+  
         if (!check) {
-          return res.status(404).json({ error: 'Usuario no encontrado o contrasena incorrecta' });
+          return res.status(404).json({ error: 'Usuario no encontrado o contraseña incorrecta' });
         }
+  
+        // Check if 2FA is enabled for the user
+        if (usuario.isTwoFactorEnabled) {
+          // Ensure twoFactorToken is present in the request body
+          if (!twoFactorToken) {
+            return res.status(400).json({ error: 'Se requiere un token de autenticación de dos factores.' });
+          }
+  
+          // Verify the 2FA token
+        }
+  
         const token = generateToken(usuario._id);
-        console.log(token)
+        console.log(token);
+  
         return res.json({ usuario, token });
       } catch (err) {
         return res.status(500).json({ error: 'Error al buscar el usuario' });
@@ -216,8 +360,61 @@ const authenticateJWT = (req, res, next) => {
     }
   });
   
+  
+  const check2FA = async (req, res, next) => {
+    try {
+      // Assuming you pass twoFactorToken in the request body
+      const twoFactorToken = req.body.twoFactorToken;
+  
+      // Buscar el usuario por ID
+      const userId = req.user.userId;
+      const user = await Usuario.findById(userId);
+  
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+  
+      // Verificar permisos
+      if (user.rol.includes('admin')) {
+        // Si el rol contiene 'admin', activar la autenticación de dos factores
+        if (!user.isTwoFactorEnabled) {
+          const { secret, user: updatedUser } = await enableTwoFactor(userId);
+          return res.json({
+            mensaje: 'Usuario actualizado y autenticación de dos factores habilitada con éxito',
+            secret,
+            updatedUser,
+          });
+        }
+  
+        // Si el 2FA está habilitado, verificar el token proporcionado
+        if (twoFactorToken) {
+          const isTokenValid = verifyTwoFactor(user, twoFactorToken);
+  
+          if (!isTokenValid) {
+            return res.status(401).json({ message: 'Invalid 2FA token.' });
+          }
+        } else {
+          // Return an error if a 2FA token is required for admin but not provided
+          return res.status(400).json({
+            error: 'Se requiere un token de autenticación de dos factores para administradores.',
+          });
+        }
+      }
+  
+      // Proceder con la actualización sin 2FA para usuarios no admin
+      // ... Rest of your existing update logic ...
+      // ...
+  
+      return res.json({ mensaje: 'Usuario actualizado con éxito', updatedUser: user });
+    } catch (err) {
+      console.error('Error al actualizar el usuario:', err);
+      return res.status(500).json({ error: 'Error al actualizar el usuario' });
+    }
+  };
+  
+  
 // UPDATE usuario dado un id.
-app.put('/usuarios/:id', authenticateJWT, async (req, res) => {
+app.put('/usuarios/:id', authenticateJWT, check2FA, async (req, res) => {
   const { id } = req.params;
   const { nombre, correoElectronico, contrasena, numeroCelular, direccion, rol } = req.body;
 
@@ -225,7 +422,7 @@ app.put('/usuarios/:id', authenticateJWT, async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'ID de usuario no válido' });
   }
-
+ 
   try {
     // Verificar permisos (descomentar según sea necesario)
     // if (req.user.rol !== 'admin' && req.user._id !== id) {
@@ -583,12 +780,10 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
     }
   });
   // CRUD de Pedidos
-  // [PENDIENTE!]
   // CREATE crea un pedido de un usuario a un restaurante en la base de datos con los datos enviados al backend
-  app.post('/pedidos', authenticateJWT,   async (req, res) => { // Punto 3: [Solo] debe recibir el ID del administrador del JWT. Se asume que son aquellos usuarios admin. 
+  app.post('/pedidos', authenticateJWT,   async (req, res) => { // [3] Solo debe recibir el ID de usuario del JWT
     try {
-      const { usuarioId, restauranteId, productos, total, estado } = req.body;
-
+      const { usuarioId = req.user.userId, restauranteId, productos, total, estado } = req.body;
       // Crea una instancia de Pedido con los datos recibidos
       const nuevoPedido = new Pedido({
         usuarioId,
@@ -597,7 +792,6 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
         total,
         estado
       });
-
       // Guarda el pedido en la base de datos
       await nuevoPedido.save();
 
