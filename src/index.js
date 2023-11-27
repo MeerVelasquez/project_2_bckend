@@ -331,7 +331,7 @@ const generateAndEnableTwoFactor = async (userId) => {
         console.log('Generated Token:', token);
   
         // Send the token to the client, e.g., in the response body
-        return res.json({ token });
+        return res.status(201).json({ token });
       } catch (err) {
         return res.status(500).json({ error: 'Error al buscar el usuario' });
       }
@@ -562,7 +562,7 @@ app.post('/restaurantes', authenticateJWT, isAdmin, async (req, res) => {
           return res.status(404).json({ message: 'No se encontraron restaurantes que coincidan con los criterios de búsqueda.' });
         }
     
-        return res.json(restaurantes);
+        return res.status(201).json(restaurantes);
       } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Error al buscar restaurantes.' });
@@ -577,7 +577,7 @@ app.post('/restaurantes', authenticateJWT, isAdmin, async (req, res) => {
     try {
       const restaurante = await Restaurante.findOne({ _id: new mongoose.Types.ObjectId(id) }).exec();
       if (restaurante) {
-        res.json(restaurante);
+        res.status(201).json(restaurante);
       } else {
         res.status(404).json({ error: 'Restaurante no encontrado' });
       }
@@ -609,7 +609,7 @@ app.post('/restaurantes', authenticateJWT, isAdmin, async (req, res) => {
         return res.status(404).json({ error: 'Restaurante no encontrado' });
       }
   
-      res.json(restaurante);
+      res.status(200).json(restaurante);
     } catch (error) {
       console.error('Error al actualizar el restaurante:', error);
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -667,7 +667,7 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
   
       await nuevoProducto.save();
   
-      return res.json({ message: 'Producto creado con éxito' });
+      return res.status(200).json({ message: 'Producto creado con éxito' });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Error al crear el producto' });
@@ -698,7 +698,7 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
         return res.status(404).json({ message: 'No se encontraron productos que coincidan con los criterios de búsqueda.' });
       }
   
-      return res.json(productos);
+      return res.status(200).json(productos);
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Error al buscar productos.' });
@@ -715,7 +715,7 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
         return res.status(404).json({ error: 'Producto no encontrado' });
       }
   
-      return res.json(producto);
+      return res.status(201).json(producto);
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Error al buscar el producto' });
@@ -753,7 +753,7 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
       // Guardar el producto actualizado en la base de datos
       await producto.save();
   
-      return res.json({ message: 'Producto actualizado con éxito', producto });
+      return res.status(200).json({ message: 'Producto actualizado con éxito', producto });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Error al actualizar el producto' });
@@ -782,7 +782,7 @@ app.patch('/restaurantes/:id/deshabilitar', authenticateJWT, async (req, res) =>
       // Guardar el producto "inhabilitado" en la base de datos
       await producto.save();
   
-      return res.json({ message: 'Producto inhabilitado con éxito', producto });
+      return res.status(200).json({ message: 'Producto inhabilitado con éxito', producto });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Error al inhabilitar el producto' });
