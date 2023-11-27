@@ -122,6 +122,15 @@ const enableTwoFactor = async (userId, secret) => {
     throw new Error('Error enabling 2FA');
   }
 };
+const verifyTwoFactor = (user, token) => {
+  // Verificar el token de 2FA
+  return speakeasy.totp.verify({
+    secret: user.twoFactorSecret,
+    encoding: 'base32',
+    token: token,
+    window: 1, // Acepta tokens generados un poco antes o después del tiempo actual
+  });
+};
 
 
 function verifyTwoFactorToken(userSecret, twoFactorToken) {
