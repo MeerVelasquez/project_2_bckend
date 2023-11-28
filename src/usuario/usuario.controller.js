@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const {  isAdmin,
-  check2FA, generateAndEnableTwoFactor} = require('../middlewares/authentication');
+  check2FA, generateAndEnableTwoFactor, generateToken} = require('../middlewares/authentication');
   // CREATE un usuario
     async  function crearUsuario (req, res)  {
     try {
