@@ -1,4 +1,4 @@
-const Producto = require('./productos.model.js'); // Adjust the path accordingly
+const Producto = require('./productos.model.js'); 
 const Restaurante = require('../restaurantes/restaurantes.model.js');
 const mongoose = require('mongoose');
 
