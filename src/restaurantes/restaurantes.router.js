@@ -6,7 +6,7 @@ const routerRestaurante = express.Router();
 routerRestaurante.post('/', authenticateJWT, isAdmin, crearRestaurante);
 
 // READ restaurantes based on provided category and/or name
-routerRestaurante.get('/restaurantes/busqueda', buscarRestaurantes);
+routerRestaurante.get('/busqueda', buscarRestaurantes);
 
 // READ restaurante by ID
 routerRestaurante.get('/:id', obtenerRestaurantePorId);
