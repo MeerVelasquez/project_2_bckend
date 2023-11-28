@@ -1,12 +1,12 @@
-const { crearUsuario, leerUsuario, updateUsuario, inhabilitarUsuario, generate2FAKey } = require('.../usuario/usuario.controller');
-const Usuario = require('.../usuario/usuario.model'); 
-const { generateAndEnableTwoFactor } = require('.../middlewares/authentication');
+const { crearUsuario, leerUsuario, updateUsuario, inhabilitarUsuario, generate2FAKey } = require('../../usuario/usuario.controller');
+const Usuario = require('../../usuario/usuario.model'); 
+const { generateAndEnableTwoFactor } = require('../../middlewares/authentication');
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 
 jest.mock('bcrypt');
-jest.mock('.../usuario/usuario.model');
-jest.mock('.../middlewares/authentication');
+jest.mock('../../usuario/usuario.model');
+jest.mock('../../middlewares/authentication');
 
 describe('User Controller - crearUsuario', () => {
     afterEach(() => {

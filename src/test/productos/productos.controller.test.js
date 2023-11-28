@@ -1,8 +1,8 @@
 const request = require('supertest');
-const app = require('.../index'); 
+const app = require('../../index'); 
 const mongoose = require('mongoose');
-const Producto = require('.../productos/productos.model');
-const Restaurante = require('.../restaurantes/restaurantes.model');
+const Producto = require('../../productos/productos.model');
+const Restaurante = require('../../restaurantes/restaurantes.model');
 
 jest.mock('.../productos/productos.model');
 jest.mock('.../restaurantes/restaurantes.model');

@@ -3,14 +3,14 @@ const {crearPedido,
     obtenerPedidosEnviadosSinAceptar,
     obtenerPedidoPorId,
     actualizarPedido,
-    inhabilitarPedido, } = require('.../pedidos/pedidos.controller');
-const Pedido = require('.../pedidos/pedidos.model'); 
+    inhabilitarPedido, } = require('../../pedidos/pedidos.controller');
+const Pedido = require('../../pedidos/pedidos.model'); 
 const request = require('supertest');
 const mongoose = require('mongoose');
 
 jest.mock('bcrypt');
-jest.mock('.../pedidos/pedidos.model');
-jest.mock('.../middlewares/authentication');
+jest.mock('../../pedidos/pedidos.model');
+jest.mock('../../middlewares/authentication');
 
 describe('Controlador de Creación de Pedido', () => {
     afterEach(() => {

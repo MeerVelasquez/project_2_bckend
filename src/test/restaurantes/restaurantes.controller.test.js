@@ -1,7 +1,7 @@
 const request = require('supertest');
-const app = require('..../index'); 
+const app = require('../../index'); 
 const mongoose = require('mongoose');
-const Restaurante = require('.../restaurantes/restaurantes.model');
+const Restaurante = require('../../restaurantes/restaurantes.model');
 
 jest.mock('.../restaurantes/restaurantes.model');
 
@@ -223,8 +223,7 @@ describe('Controlador de Restaurantes', () => {
       });
 
       test('Debería retornar un error 404 si el restaurante no existe', async () => {
-        // Supongamos que no hay un restaurante con este ID en tu base de datos
-        const restauranteNoExistenteId = '605a4a0bb7707e14f8d891f7'; // Reemplaza con un ID no existente
+        const restauranteNoExistenteId = '605a4a0bb7707e14f8d891f7'; 
     
         const response = await supertest(app)
           .put(`/restaurantes/${restauranteNoExistenteId}`)
@@ -235,8 +234,7 @@ describe('Controlador de Restaurantes', () => {
       });
 
       test('Debería retornar un error 404 si el restaurante no existe-body', async () => {
-        // Supongamos que no hay un restaurante con este ID en tu base de datos
-        const restauranteNoExistenteId = '605a4a0bb7707e14f8d891f7'; // Reemplaza con un ID no existente
+        const restauranteNoExistenteId = '605a4a0bb7707e14f8d891f7'; 
     
         const response = await supertest(app)
           .put(`/restaurantes/${restauranteNoExistenteId}`)
