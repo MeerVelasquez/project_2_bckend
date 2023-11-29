@@ -8,10 +8,10 @@ const {  isAdmin,
     async  function crearUsuario (req, res)  {
     try {
       const { nombre, correoElectronico, contrasena, numeroCelular, direccion, rol } = req.body;
-  
+      if (contrasena === undefined || correoElectronico === undefined) return res.status(400).json({ error: 'La contrasena y/o correo son inválidos.' });
       // Usando bcrypt para encriptar
       const hashcontrasena = await bcrypt.hash(contrasena, 10);
-  
+      
       // Instancia de modelo usuario
       const nuevoUsuario = new Usuario({
         nombre,

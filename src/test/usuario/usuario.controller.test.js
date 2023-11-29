@@ -8,656 +8,300 @@ jest.mock('bcrypt');
 jest.mock('../../usuario/usuario.model');
 jest.mock('../../middlewares/authentication');
 
+const createTestUser = async () => {
+  try {
+    const newUser = new Usuario({
+      nombre: 'John Doe',
+      correoElectronico: 'john.doe@example.com',
+      contrasena: await bcrypt.hash('password123', 10),
+      numeroCelular: '123456789',
+      direccion: '123 Main Street',
+      rol: 'user',
+    });
+
+    const result = await newUser.save();
+    return result;
+  } catch (error) {
+    console.error('Error creating test user:', error);
+    throw error; // Rethrow the error to indicate test failure
+  }
+};
+
 describe('User Controller - crearUsuario', () => {
-    afterEach(() => {
-      jest.clearAllMocks();
-    });
-  
-    test('Debe crear un usuario de forma exitosa', async () => {
-      const req = {
-        body: {
-          nombre: 'John Doe',
-          correoElectronico: 'john@example.com',
-          contrasena: 'password123',
-          numeroCelular: '1234567890',
-          direccion: '123 Main St',
-          rol: 'user',
-        },
-      };
-  
-      const res = {
-        status: jest.fn(),
-        json: jest.fn(),
-      };
-  
-      bcrypt.hash.mockResolvedValue('hashedPassword');
-  
-      await crearUsuario(req, res);
-  
-      expect(res.status).toHaveBeenCalledWith(201);
-     
-    });
-
-    test('Debe crear un usuario de forma exitosa-status', async () => {
-        const req = {
-          body: {
-            nombre: 'John Doe',
-            correoElectronico: 'john@example.com',
-            contrasena: 'password123',
-            numeroCelular: '1234567890',
-            direccion: '123 Main St',
-            rol: 'user',
-          },
-        };
-    
-        const res = {
-          status: jest.fn(),
-          json: jest.fn(),
-        };
-    
-        bcrypt.hash.mockResolvedValue('hashedPassword');
-    
-        await crearUsuario(req, res);
-    
-        expect(res.status).toHaveBeenCalledWith(201);
-      });
-
-        test('Debe crear un usuario de forma exitosa-json', async () => {
-            const req = {
-                body: {
-                  nombre: 'John Doe',
-                  correoElectronico: 'john@example.com',
-                  contrasena: 'password123',
-                  numeroCelular: '1234567890',
-                  direccion: '123 Main St',
-                  rol: 'user',
-                },
-              };
-          
-              const res = {
-                status: jest.fn(),
-                json: jest.fn(),
-              };
-          
-              bcrypt.hash.mockResolvedValue('hashedPassword');
-          
-              await crearUsuario(req, res);
-              expect(res.json).toHaveBeenCalledWith({ mensaje: 'Usuario creado con éxito' });
-               
-        });
-
-        test('Error al crear un usuario', async () => {
-            jest.spyOn(require('.../usuario/usuario.model'), 'save').mockImplementationOnce(() => {
-              throw new Error('Simulated error');
-            });
-        
-            const response = await request(app)
-              .post('/usuarios')
-              .send({
-                nombre: 'John Doe',
-                correoElectronico: 'john@example.com',
-                contrasena: 'password123',
-                numeroCelular: '1234567890',
-                direccion: '123 Main St',
-                rol: 'user',
-              });
-        
-            expect(response.statusCode).toBe(500);
-          });
-
-          test('Error al crear un usuario-body', async () => {
-            jest.spyOn(require('.../usuario/usuario.model'), 'save').mockImplementationOnce(() => {
-              throw new Error('Simulated error');
-            });
-        
-            const response = await request(app)
-              .post('/usuarios')
-              .send({
-                nombre: 'John Doe',
-                correoElectronico: 'john@example.com',
-                contrasena: 'password123',
-                numeroCelular: '1234567890',
-                direccion: '123 Main St',
-                rol: 'user',
-              });
-              expect(response.body).toHaveProperty('error', 'Error al crear el usuario');
-          });
-
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-    describe('User Controller - leerUsuario', () => {
-        afterEach(() => {
-        jest.clearAllMocks();
-        });
 
-        test('Debe regresar un token ID', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findById.mockResolvedValueOnce({ _id: mockUserId });
-        
-            const response = await request(app)
-              .post('/usuarios/login')
-              .send({ _id: '655f9afc958d8ea1da2cab0f' });
-        
-            expect(response.statusCode).toBe(201);
-          });
+  // Crear usuario
+  test('Deberia crear un usuario exitosamente', async () => {
+    // Mock de la request
+    const req = {
+      body: {
+        nombre: 'John Doe',
+        correoElectronico: 'john.doe@example.com',
+        contrasena: 'password123',
+        numeroCelular: '123456789',
+        direccion: '123 Main Street',
+        rol: 'user',
+      },
+    };
 
-          test('Debe regresar un token ID- body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findById.mockResolvedValueOnce({ _id: mockUserId });
-        
-            const response = await request(app)
-              .post('/usuarios/login')
-              .send({ _id: '655f9afc958d8ea1da2cab0f' });
-        
-            
-            expect(response.body).toHaveProperty('token');
-          });
+    const res = {
+      status: jest.fn(() => res),
+      json: jest.fn(),
+    };
 
-            test('Debe regresar un token ID- gentoken', async () => {
-                const mockUserId = mongoose.Types.ObjectId();
-                Usuario.findById.mockResolvedValueOnce({ _id: mockUserId });
-            
-                const response = await request(app)
-                .post('/usuarios/login')
-                .send({ _id: '655f9afc958d8ea1da2cab0f' });
-            
-                expect(generateToken).toHaveBeenCalledWith(mockUserId);
-            });
+    // Mock save
+    Usuario.prototype.save.mockResolvedValueOnce();
 
-            test('Debe regresar un token ID- valid-id', async () => {
-                const mockUserId = mongoose.Types.ObjectId();
-                Usuario.findById.mockResolvedValueOnce({ _id: mockUserId });
-            
-                const response = await request(app)
-                .post('/usuarios/login')
-                .send({ _id: '655f9afc958d8ea1da2cab0f' });
-            
-                expect(Usuario.findById).toHaveBeenCalledWith('655f9afc958d8ea1da2cab0f');
-            });
+    // crearUsuario
+    await crearUsuario(req, res);
+
+    // expects...
+    expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
     
-  test('Debe regresar un token cuando le proveen correoElectronico y contrasena ', async () => {
-    const mockUserId = mongoose.Types.ObjectId();
-    Usuario.findOne.mockResolvedValueOnce({ _id: mockUserId, contrasena: 'hashedPassword' });
-    bcrypt.compare.mockResolvedValueOnce(true);
-
-    const response = await request(app)
-      .post('/usuarios/login')
-      .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
-
-    expect(response.statusCode).toBe(200);
-   
+    expect(Usuario.prototype.save).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'Usuario creado con éxito' });
   });
 
-  test('Debe regresar un token cuando le proveen correoElectronico y contrasena -body-usuario ', async () => {
-    const mockUserId = mongoose.Types.ObjectId();
-    Usuario.findOne.mockResolvedValueOnce({ _id: mockUserId, contrasena: 'hashedPassword' });
-    bcrypt.compare.mockResolvedValueOnce(true);
+  test('Deberia validar que los campos requeridos hayan sido digitados', async () => {
+    
+    const req = {
+      body: {
+        contrasena:undefined,
+        
+      },
+    };
 
-    const response = await request(app)
-      .post('/usuarios/login')
-      .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
+    const res = {
+      status: jest.fn(() => res),
+      json: jest.fn(),
+    };
 
+    // crearUsuario
+    await crearUsuario(req, res);
 
-    expect(response.body).toHaveProperty('usuario');
-  
+    // expect...
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error:  'La contrasena y/o correo son inválidos.' });
   });
-
-        test('Debe regresar un token cuando le proveen correoElectronico y contrasena -body-token ', async () => {
-             const mockUserId = mongoose.Types.ObjectId();
-         Usuario.findOne.mockResolvedValueOnce({ _id: mockUserId, contrasena: 'hashedPassword' });
-            bcrypt.compare.mockResolvedValueOnce(true);
-
-        const response = await request(app)
-      .post('/usuarios/login')
-      .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
-
-       expect(response.body).toHaveProperty('token');
-     });
-
-     test('Debe regresar un token cuando le proveen correoElectronico y contrasena - bycrypt ', async () => {
-    const mockUserId = mongoose.Types.ObjectId();
-    Usuario.findOne.mockResolvedValueOnce({ _id: mockUserId, contrasena: 'hashedPassword' });
-    bcrypt.compare.mockResolvedValueOnce(true);
-
-    const response = await request(app)
-      .post('/usuarios/login')
-      .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
-
-    
-    expect(bcrypt.compare).toHaveBeenCalledWith('password', 'hashedPassword');
-   
-     });
-
-     test('Debe regresar un token cuando le proveen correoElectronico y contrasena - genToken ', async () => {
-        const mockUserId = mongoose.Types.ObjectId();
-        Usuario.findOne.mockResolvedValueOnce({ _id: mockUserId, contrasena: 'hashedPassword' });
-        bcrypt.compare.mockResolvedValueOnce(true);
-
-        const response = await request(app)
-      .post('/usuarios/login')
-      .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
-
-     expect(generateToken).toHaveBeenCalledWith(mockUserId);
-
-        test('Debe regresar 404 cuando _id es dado pero no encontrado - status', async () => {
-        Usuario.findById.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .post('/usuarios/login')
-          .send({ _id: '1345678898' });
-    
-        expect(response.statusCode).toBe(404);
-      });
-
-      test('Debe regresar 404 cuando _id es dado pero no encontrado - body', async () => {
-        Usuario.findById.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .post('/usuarios/login')
-          .send({ _id: '1345678898' });
-    
-        expect(response.body).toHaveProperty('error', 'Usuario no encontrado');
-      });
-
-      test('correo electronico y contrasena pero el usuario no es encontrado -status', async () => {
-        Usuario.findOne.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .post('/usuarios/login')
-          .send({ correoElectronico: 'non-existing@example.com', contrasena: 'password' });
-    
-        expect(response.statusCode).toBe(404);
-      });
-
-      test('correo electronico y contrasena pero el usuario no es encontrado -body', async () => {
-        Usuario.findOne.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .post('/usuarios/login')
-          .send({ correoElectronico: 'non-existing@example.com', contrasena: 'password' });
-    
-       
-        expect(response.body).toHaveProperty('error', 'Usuario no encontrado o contraseña incorrecta');
-      
-      });
-
-      test('should return 500 when there is an error finding user by correoElectronico', async () => {
-        Usuario.findOne.mockRejectedValueOnce(new Error('Database error'));
-    
-        const response = await request(app)
-          .post('/usuarios/login')
-          .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
-    
-        expect(response.statusCode).toBe(500);
-  
-      });
-
-      test('should return 500 when there is an error finding user by correoElectronico - body', async () => {
-        Usuario.findOne.mockRejectedValueOnce(new Error('Database error'));
-    
-        const response = await request(app)
-          .post('/usuarios/login')
-          .send({ correoElectronico: 'test@example.com', contrasena: 'password' });
-    
-      
-        expect(response.body).toHaveProperty('error', 'Error al buscar el usuario');
-
-      });
-
-
-
-
- 
-
-    
-    });
-      
-
-
 });
+// leerUsuario
+describe('leerUsuario function', () => {
+  test('404 en Id de usuario invalido.', async () => {
+    // Create a test user and get its ID
+    const userId = await createTestUser();
+    const req = {
+      body: { _id: new mongoose.Types.ObjectId(100) },
+    };
 
-    describe('User Controller - updateUsuario', () => {
-        afterEach(() => {
-        jest.clearAllMocks();
-        });
+    const res = {
+      status: jest.fn(() => res),
+      json: jest.fn(),
+    };
 
-        test('Actualizar un usuario de manera exitosa -status', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mockUpdatedUser = {
-              _id: mockUserId,
-              nombre: 'Nuevo Nombre',
-              correoElectronico: 'nuevo@example.com',
-              numeroCelular: '1234567890',
-              direccion: 'Nueva Dirección',
-              rol: 'admin',
-            };
-            Usuario.findByIdAndUpdate.mockResolvedValueOnce(mockUpdatedUser);
-        
-            const response = await request(app)
-              .put(`/usuarios/${mockUserId}`)
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-            expect(response.statusCode).toBe(200);
-          });
+    await leerUsuario(req, res);
 
-          test('Actualizar un usuario de manera exitosa - body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mockUpdatedUser = {
-              _id: mockUserId,
-              nombre: 'Nuevo Nombre',
-              correoElectronico: 'nuevo@example.com',
-              numeroCelular: '1234567890',
-              direccion: 'Nueva Dirección',
-              rol: 'admin',
-            };
-            Usuario.findByIdAndUpdate.mockResolvedValueOnce(mockUpdatedUser);
-        
-            const response = await request(app)
-              .put(`/usuarios/${mockUserId}`)
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-        
-            expect(response.body).toEqual(mockUpdatedUser);
-            expect(Usuario.findByIdAndUpdate).toHaveBeenCalledWith(mockUserId, expect.any(Object), { new: true });
-          });
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error:  'Usuario no encontrado' });
+  });
+  test('400 cuando tenga parametros invalidos', async () => {
+    const req = {
+      body: { invalidParameter: 'placeholder' },
+    };
 
-          test('Actualizar un usuario de manera exitosa - object', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mockUpdatedUser = {
-              _id: mockUserId,
-              nombre: 'Nuevo Nombre',
-              correoElectronico: 'nuevo@example.com',
-              numeroCelular: '1234567890',
-              direccion: 'Nueva Dirección',
-              rol: 'admin',
-            };
-            Usuario.findByIdAndUpdate.mockResolvedValueOnce(mockUpdatedUser);
-        
-            const response = await request(app)
-              .put(`/usuarios/${mockUserId}`)
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-            expect(Usuario.findByIdAndUpdate).toHaveBeenCalledWith(mockUserId, expect.any(Object), { new: true });
-          });
-       
-          test('user id invalido- status', async () => {
-            const response = await request(app)
-              .put('/usuarios/5')
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-            expect(response.statusCode).toBe(400);
-          });
+    const res = {
+      status: jest.fn(() => res),
+      json: jest.fn(),
+    };
 
-          test('user id invalido- body', async () => {
-            const response = await request(app)
-              .put('/usuarios/5')
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-            expect(response.body).toHaveProperty('error', 'ID de usuario no válido');
-          });
+    await leerUsuario(req, res);
 
-          test('user id invalido- object', async () => {
-            const response = await request(app)
-              .put('/usuarios/5')
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
+    expect(res.status).toHaveBeenCalledWith(400);
+    
+  });
+});
+describe('updateUsuario function', () => {
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
 
-            expect(Usuario.findByIdAndUpdate).not.toHaveBeenCalled();
-          });
+  it('should update a user successfully', async () => {
+    const userId = new mongoose.Types.ObjectId().toString();
+    console.log(userId);
+    const req = {
+      params: { id: new mongoose.Types.ObjectId },
+      body: {
+        nombre: 'Updated Name',
+        correoElectronico: 'updated-email@example.com',
+        contrasena: 'updated-password',
+        numeroCelular: '987654321',
+        direccion: 'Updated Address',
+        rol: 'admin',
+      },
+    };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
 
-          test('usuario no encontrado', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findByIdAndUpdate.mockResolvedValueOnce(null);
-        
-            const response = await request(app)
-              .put(`/usuarios/${mockUserId}`)
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-            expect(response.statusCode).toBe(404);
-          });
-
-          test('usuario no encontrado- body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findByIdAndUpdate.mockResolvedValueOnce(null);
-        
-            const response = await request(app)
-              .put(`/usuarios/${mockUserId}`)
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-  
-            expect(response.body).toHaveProperty('error', 'Usuario no encontrado');
-         
-          });
-
-          test('usuario no encontrado- object', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findByIdAndUpdate.mockResolvedValueOnce(null);
-        
-            const response = await request(app)
-              .put(`/usuarios/${mockUserId}`)
-              .send({
-                nombre: 'Nuevo Nombre',
-                correoElectronico: 'nuevo@example.com',
-                numeroCelular: '1234567890',
-                direccion: 'Nueva Dirección',
-                rol: 'admin',
-              });
-        
-  
-              expect(Usuario.findByIdAndUpdate).toHaveBeenCalledWith(mockUserId, expect.any(Object), { new: true });
-         
-          });
-
-
-
-
+    // Mock the findByIdAndUpdate method of the user model
+    Usuario.findByIdAndUpdate.mockResolvedValue({
+      _id: userId,
+      nombre: 'Updated Name',
+      correoElectronico: 'updated-email@example.com',
+      numeroCelular: '987654321',
+      direccion: 'Updated Address',
+      rol: 'admin',
     });
 
-    describe('User Controller - inhabilitarUsuario', () => {
-        afterEach(() => {
-        jest.clearAllMocks();
-        });
+    await updateUsuario(req, res);
+
     
-
-        test('inhabilitar exitosamente- status', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mockUser = {
-              _id: mockUserId,
-              habilitado: true,
-            };
-            Usuario.findById.mockResolvedValueOnce(mockUser);
-        
-            const response = await request(app)
-              .delete(`/usuarios/${mockUserId}`);
-        
-            expect(response.statusCode).toBe(200);
-            expect(response.body).toEqual({ message: 'Usuario deshabilitado con éxito' });
-          });
-
-
-          test('inhabilitar exitosamente- body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mockUser = {
-              _id: mockUserId,
-              habilitado: true,
-            };
-            Usuario.findById.mockResolvedValueOnce(mockUser);
-        
-            const response = await request(app)
-              .delete(`/usuarios/${mockUserId}`);
-
-            expect(response.body).toEqual({ message: 'Usuario deshabilitado con éxito' });
-          });
-
-          test('usuario no encontrado - status', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findById.mockResolvedValueOnce(null);
-        
-            const response = await request(app)
-              .delete(`/usuarios/${mockUserId}`);
-        
-            expect(response.statusCode).toBe(404);
-
-          });
-
-          test('usuario no encontrado - body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findById.mockResolvedValueOnce(null);
-        
-            const response = await request(app)
-              .delete(`/usuarios/${mockUserId}`);
-        
-       
-            expect(response.body).toHaveProperty('error', 'Usuario no encontrado');
-   
-          });
-
-          test('usuario no encontrado - object', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            Usuario.findById.mockResolvedValueOnce(null);
-        
-            const response = await request(app)
-              .delete(`/usuarios/${mockUserId}`);
-    
-            expect(Usuario.findById).toHaveBeenCalledWith(mockUserId);
-          });
-    
+    expect(res.json).toHaveBeenCalledWith({
+      _id: userId,
+      nombre: 'Updated Name',
+      correoElectronico: 'updated-email@example.com',
+      numeroCelular: '987654321',
+      direccion: 'Updated Address',
+      rol: 'admin',
     });
+  });
 
-    describe('User Controller - generate2FAKey', () => {
-        afterEach(() => {
-          jest.clearAllMocks();
-        });
-      
-        test('should generate 2FA secret successfully', async () => {
-          const mockUserId = mongoose.Types.ObjectId();
-          const mock2FASecret = 'mock2FASecret';
-          generateAndEnableTwoFactor.mockResolvedValueOnce({ secret: mock2FASecret });
-      
-          const response = await request(app)
-            .post(`/generate-2fa-secret/${mockUserId}`);
-      
-          expect(response.statusCode).toBe(200);
+  it('400 si se dan parametros invalidos', async () => {
+    const req = {
+      params: { id: 'nonexistent-user-id' },
+      body: { nombre: 'Updated Name' },
+    };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    // Mock the findByIdAndUpdate method to return null (user not found)
+    Usuario.findByIdAndUpdate.mockResolvedValue(null);
+
+    await updateUsuario(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'ID de usuario no válido' });
+  });
+
+  it('should return a 400 status when user ID is invalid', async () => {
+    const req = {
+      params: { id: 'invalid-user-id' },
+      body: { nombre: 'Updated Name' },
+    };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    // Mock the findByIdAndUpdate method to throw an error (invalid ID)
+    Usuario.findByIdAndUpdate.mockRejectedValue(new mongoose.Error.ValidationError());
+
+    await updateUsuario(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'ID de usuario no válido' });
+  });
+
   
-        });
+});
+describe('inhabilitarUsuario function', () => {
+  it('should delete a user successfully', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    Usuario.findByIdAndDelete.mockResolvedValueOnce({ _id: userId });
 
-        test('should generate 2FA secret successfully- body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mock2FASecret = 'mock2FASecret';
-            generateAndEnableTwoFactor.mockResolvedValueOnce({ secret: mock2FASecret });
-        
-            const response = await request(app)
-              .post(`/generate-2fa-secret/${mockUserId}`);
-        
+    const req = { params: { id: userId } };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
 
-              expect(response.body).toEqual({ secret: mock2FASecret });
-          });
-          test('should generate 2FA secret successfully- mock', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            const mock2FASecret = 'mock2FASecret';
-            generateAndEnableTwoFactor.mockResolvedValueOnce({ secret: mock2FASecret });
-        
-            const response = await request(app)
-              .post(`/generate-2fa-secret/${mockUserId}`);
-        
+    await inhabilitarUsuario(req, res);
 
-            expect(response.body).toEqual({ secret: mock2FASecret });
-          });
-        test('should handle invalid user ID', async () => {
-            const response = await request(app)
-              .post('/generate-2fa-secret/invalid-id');
-        
-            expect(response.statusCode).toBe(400);
-       
-          });
+    
+    expect(res.json).toHaveBeenCalledWith({ message: 'Usuario eliminado con éxito' });
+  });
 
-          test('should handle invalid user ID-body', async () => {
-            const response = await request(app)
-              .post('/generate-2fa-secret/invalid-id');
-        
-       
-            expect(response.body).toHaveProperty('error', 'Invalid userId');
- 
-          });
+  it('should handle errors and return a 500 status', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    Usuario.findByIdAndDelete.mockRejectedValueOnce('Some error');
 
-          test('should handle invalid user ID-object', async () => {
-            const response = await request(app)
-              .post('/generate-2fa-secret/invalid-id');
-        
-       
-              expect(generateAndEnableTwoFactor).not.toHaveBeenCalled();
- 
-          });
-        
-          test('should handle error during 2FA generation', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            generateAndEnableTwoFactor.mockRejectedValueOnce(new Error('Error generating 2FA secret'));
-        
-            const response = await request(app)
-              .post(`/generate-2fa-secret/${mockUserId}`);
-        
-            expect(response.statusCode).toBe(500);
-            expect(response.body).toHaveProperty('error', 'Error generating 2FA secret');
-            expect(generateAndEnableTwoFactor).toHaveBeenCalledWith(mockUserId);
-          });
+    const req = { params: { id: userId } };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
 
-          test('should handle error during 2FA generation-body', async () => {
-            const mockUserId = mongoose.Types.ObjectId();
-            generateAndEnableTwoFactor.mockRejectedValueOnce(new Error('Error generating 2FA secret'));
-        
-            const response = await request(app)
-              .post(`/generate-2fa-secret/${mockUserId}`);
-        
+    await inhabilitarUsuario(req, res);
 
-            expect(response.body).toHaveProperty('error', 'Error generating 2FA secret');
-   
-          });
-        });
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error al eliminar el usuario' });
+  });
+
+  it('should handle a non-existing user and return a 404 status', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    Usuario.findByIdAndDelete.mockResolvedValueOnce(null);
+    const req = { params: { id: userId } };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    await inhabilitarUsuario(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Usuario no encontrado' });
+  });
+});
+describe('generate2FAKey function', () => {
+  it('should generate and enable 2FA successfully', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    generateAndEnableTwoFactor.mockResolvedValueOnce({ result: 'success' });
+
+    const req = { params: { userId } };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    await generate2FAKey(req, res);
+
+    
+    expect(res.json).toHaveBeenCalledWith({ result: 'success' });
+  });
+
+  it('should handle errors during 2FA generation and return a 500 status', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    generateAndEnableTwoFactor.mockRejectedValueOnce('Some error');
+
+    const req = { params: { userId } };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    await generate2FAKey(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error al generar secreto 2FA' });
+  });
+
+  it('should handle an invalid userId and return a 400 status', async () => {
+    const invalidUserId = 'invalidId';
+    const req = { params: { userId: invalidUserId } };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    await generate2FAKey(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Id de usuario invalida' });
+  });
+});

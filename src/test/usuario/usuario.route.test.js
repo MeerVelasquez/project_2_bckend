@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const Usuario = require('../../usuario/usuario.model');
 
 
-jest.mock('.../usuario/usuario.model');
+jest.mock(Usuario);
 
 describe('Usuario routes', () => {
 
