@@ -23,7 +23,7 @@ const createTestUser = async () => {
     return result;
   } catch (error) {
     console.error('Error creating test user:', error);
-    throw error; // Rethrow the error to indicate test failure
+    throw error; // Retorna el error para indicar error de test
   }
 };
 
@@ -91,7 +91,7 @@ describe('User Controller - crearUsuario', () => {
 // leerUsuario
 describe('leerUsuario function', () => {
   test('404 en Id de usuario invalido.', async () => {
-    // Create a test user and get its ID
+    // Create un usuario de prueba y obtiene su ID
     const userId = await createTestUser();
     const req = {
       body: { _id: new mongoose.Types.ObjectId(100) },
@@ -147,7 +147,7 @@ describe('updateUsuario function', () => {
       json: jest.fn(),
     };
 
-    // Mock the findByIdAndUpdate method of the user model
+    // Mock del método findByIdAndUpdate del user model
     Usuario.findByIdAndUpdate.mockResolvedValue({
       _id: userId,
       nombre: 'Updated Name',
@@ -180,7 +180,7 @@ describe('updateUsuario function', () => {
       json: jest.fn(),
     };
 
-    // Mock the findByIdAndUpdate method to return null (user not found)
+    // Mock del método findByIdAndUpdate para retornar null (user not found)
     Usuario.findByIdAndUpdate.mockResolvedValue(null);
 
     await updateUsuario(req, res);
@@ -199,7 +199,7 @@ describe('updateUsuario function', () => {
       json: jest.fn(),
     };
 
-    // Mock the findByIdAndUpdate method to throw an error (invalid ID)
+    // Mock del método findByIdAndUpdate para retornar un error (ID invalida)
     Usuario.findByIdAndUpdate.mockRejectedValue(new mongoose.Error.ValidationError());
 
     await updateUsuario(req, res);
