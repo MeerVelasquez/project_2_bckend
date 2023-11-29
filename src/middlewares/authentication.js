@@ -151,18 +151,43 @@ const isAdmin = async (req, res, next) => {
   });
 };
 
+// Como es dificil el uso de un authenticator sin tener un frontend se usa la funcion debajo de los comentarios
+//   function verifyTwoFactorToken(userSecret, twoFactorToken) {
+//   // Verify the token
+//   const verificationResult = speakeasy.totp.verify({
+//     secret: userSecret,
+//     token: twoFactorToken,
+//   });
 
-  function verifyTwoFactorToken(userSecret, twoFactorToken) {
-  // Verify the token
-  const verificationResult = speakeasy.totp.verify({
-    secret: userSecret,
-    token: twoFactorToken,
-  });
+//   // Return the verification result
+//   return verificationResult;
+// }
+function verifyTwoFactorToken(userSecret, twoFactorToken) {
+  try {
+    // Recibir el tiempo actual en segundos
+    const currentTime = Math.floor(Date.now() / 1000);
 
-  // Return the verification result
-  return verificationResult;
+    // // Generate a time-based token using the current time
+    // const generatedToken = speakeasy.totp({
+    //   secret: userSecret,
+    //   encoding: 'base32',
+    //   time: currentTime,
+    // });
+
+    // Verify the provided token against the generated token
+    const verificationResult = speakeasy.totp.verify({
+      secret: userSecret,
+      token: twoFactorToken,
+      window: 1, 
+    });
+
+    // Return the verification result
+    return verificationResult;
+  } catch (error) {
+    console.error('Error verifying two-factor token:', error);
+    return false; // Verification failed
+  }
 }
-
   const middleware = async (req, res, next) => {
   try {
     console.log('Request Body:', req.body); // Log the request body
@@ -194,8 +219,8 @@ const isAdmin = async (req, res, next) => {
     // 2FA verification
     console.log('Verifying 2FA token:', twoFactorToken);
     console.log(user.twoFactorSecret)
-    // const isTokenValid = verifyTwoFactorToken(user.twoFactorSecret, twoFactorToken);
-    const isTokenValid = user.twoFactorSecret === twoFactorToken;
+    const isTokenValid = verifyTwoFactorToken(user.twoFactorSecret, twoFactorToken);
+    // const isTokenValid = user.twoFactorSecret === twoFactorToken;
     if (isTokenValid) {
       req.user = user;
       console.log('2FA token is valid, proceeding with the request');
@@ -251,6 +276,18 @@ const generateAndEnableTwoFactor = async (userId) => {
     throw new Error('Error generating 2FA secret');
   }
 };
+// function generateTOTPWithoutAuthenticator(userSecret) {
+//   const currentTime = Math.floor(Date.now() / 1000); 
+//   const totpCode = speakeasy.totp({
+//     secret: userSecret,
+//     encoding: 'base32', 
+//     time: currentTime,
+//   });
+//   return totpCode;
+// }
+
+// Example usage
+
 module.exports = {
   authenticateJWT,
   isAdmin,
