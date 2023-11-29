@@ -26,6 +26,6 @@ routerPedido.get('/:id', authenticateJWT, obtenerPedidoPorId);
 routerPedido.put('/:id', actualizarPedido);
 
 // DELETE eliminar pedido por ID
-routerPedido.delete('/inhabilitar/:id', inhabilitarPedido);
+routerPedido.delete('/:id', inhabilitarPedido);
 
 module.exports = routerPedido;
