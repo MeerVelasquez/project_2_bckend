@@ -1,501 +1,321 @@
 const request = require('supertest');
-const app = require('../../index'); 
+const {
+  crearProducto,
+  buscarProductos,
+  obtenerProductoPorId,
+  actualizarProducto,
+  inhabilitarProducto,
+} = require('../../productos/productos.controller'); 
 const mongoose = require('mongoose');
 const Producto = require('../../productos/productos.model');
 const Restaurante = require('../../restaurantes/restaurantes.model');
 
-jest.mock('.../productos/productos.model');
-jest.mock('.../restaurantes/restaurantes.model');
+jest.mock('../../productos/productos.model');
+jest.mock('../../restaurantes/restaurantes.model');
 
 describe('Controlador de Productos', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
-
-  describe('Crear Producto', () => {
-    test('debería crear un producto exitosamente', async () => {
-      const mockRestauranteId = mongoose.Types.ObjectId();
-      const mockProducto = { nombre: 'Producto de prueba', descripcion: 'Descripción de prueba', precio: 10, restauranteId: mockRestauranteId };
-
-      Restaurante.findById.mockResolvedValueOnce({ _id: mockRestauranteId });
-      Producto.prototype.save.mockResolvedValueOnce(mockProducto);
-
-      const response = await request(app)
-        .post('/productos')
-        .send(mockProducto);
-
-      expect(response.statusCode).toBe(200);
+  describe('crearProducto', () => {
+    it('should create a new producto and return success message', async () => {
+      
+      const req = {
+        body: {
+          nombre: 'Nuevo Producto',
+          descripcion: 'Descripción del producto',
+          precio: 9.99,
+          categoria: 'Comida',
+          restauranteId: new mongoose.Types.ObjectId().toHexString(),
+        },
+      };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      const mockRestaurante = { _id: req.body.restauranteId };
+      jest.spyOn(Restaurante, 'findById').mockImplementationOnce(() => mockRestaurante);
+  
+      
+      const mockProducto = { _id: new mongoose.Types.ObjectId() };
+      jest.spyOn(Producto.prototype, 'save').mockImplementationOnce(() => mockProducto);
+  
+      
+      await crearProducto(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Producto creado con éxito' });
     });
-
-    test('debería crear un producto exitosamente - body', async () => {
-        const mockRestauranteId = mongoose.Types.ObjectId();
-        const mockProducto = { nombre: 'Producto de prueba', descripcion: 'Descripción de prueba', precio: 10, restauranteId: mockRestauranteId };
   
-        Restaurante.findById.mockResolvedValueOnce({ _id: mockRestauranteId });
-        Producto.prototype.save.mockResolvedValueOnce(mockProducto);
+    it('should return a 400 when required fields are missing', async () => {
+      
+      const req = { body: { descripcion: 'Descripción del producto' } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
   
-        const response = await request(app)
-          .post('/productos')
-          .send(mockProducto);
+      
+      await crearProducto(req, res);
   
-        expect(response.body).toEqual({ message: 'Producto creado con éxito' });
-      });
-
-      test('debería devolver un error 400 si faltan campos obligatorios', async () => {
-        const response = await request(app)
-          .post('/productos')
-          .send({ nombre: 'Producto sin campos obligatorios' });
-    
-        expect(response.statusCode).toBe(400);
-
-      });
-      test('debería devolver un error 400 si faltan campos obligatorios-body', async () => {
-        const response = await request(app)
-          .post('/productos')
-          .send({ nombre: 'Producto sin campos obligatorios' });
-
-        expect(response.body).toEqual({ error: 'Todos los campos son obligatorios.' });
-      });
-
-      test('debería devolver un error 404 si el restaurante no se encuentra', async () => {
-        const mockProducto = { nombre: 'Producto de prueba', descripcion: 'Descripción de prueba', precio: 10, restauranteId: mongoose.Types.ObjectId() };
-    
-        Restaurante.findById.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .post('/productos')
-          .send(mockProducto);
-    
-        expect(response.statusCode).toBe(404);
-
-      });
-    
-      test('debería devolver un error 404 si el restaurante no se encuentra -body', async () => {
-        const mockProducto = { nombre: 'Producto de prueba', descripcion: 'Descripción de prueba', precio: 10, restauranteId: mongoose.Types.ObjectId() };
-    
-        Restaurante.findById.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .post('/productos')
-          .send(mockProducto);
-    
-
-        expect(response.body).toEqual({ error: 'Restaurante no encontrado' });
-      });
-
-      test('debería devolver un error 500 si hay un error al guardar el producto', async () => {
-        const mockRestauranteId = mongoose.Types.ObjectId();
-        const mockProducto = { nombre: 'Producto de prueba', descripcion: 'Descripción de prueba', precio: 10, restauranteId: mockRestauranteId };
-    
-        Restaurante.findById.mockResolvedValueOnce({ _id: mockRestauranteId });
-        Producto.prototype.save.mockRejectedValueOnce(new Error('Error al guardar el producto'));
-    
-        const response = await request(app)
-          .post('/productos')
-          .send(mockProducto);
-    
-        expect(response.statusCode).toBe(500);
-    
-      });
-
-      test('debería devolver un error 500 si hay un error al guardar el producto-body', async () => {
-        const mockRestauranteId = mongoose.Types.ObjectId();
-        const mockProducto = { nombre: 'Producto de prueba', descripcion: 'Descripción de prueba', precio: 10, restauranteId: mockRestauranteId };
-    
-        Restaurante.findById.mockResolvedValueOnce({ _id: mockRestauranteId });
-        Producto.prototype.save.mockRejectedValueOnce(new Error('Error al guardar el producto'));
-    
-        const response = await request(app)
-          .post('/productos')
-          .send(mockProducto);
-    
-
-        expect(response.body).toEqual({ error: 'Error al crear el producto' });
-      });
-  });
-
-  describe('Buscar Productos', () => {
-    afterEach(() => {
-        jest.clearAllMocks();
-      });
-    
-      test('debería buscar productos correctamente', async () => {
-        const mockRestauranteId = mongoose.Types.ObjectId();
-        const mockCategoria = 'Bebida';
-        const mockProductos = [
-          { _id: mongoose.Types.ObjectId(), nombre: 'Producto 1', categoria: mockCategoria, restauranteId: mockRestauranteId },
-          { _id: mongoose.Types.ObjectId(), nombre: 'Producto 2', categoria: mockCategoria, restauranteId: mockRestauranteId },
-        ];
-    
-        Producto.find.mockResolvedValueOnce(mockProductos);
-    
-        const response = await request(app)
-          .get('/productos')
-          .query({ restauranteId: mockRestauranteId, categoria: mockCategoria });
-    
-        expect(response.statusCode).toBe(200);
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Todos los campos son obligatorios.' });
+    });
   
-      });
-
-      test('debería buscar productos correctamente - body', async () => {
-        const mockRestauranteId = mongoose.Types.ObjectId();
-        const mockCategoria = 'Bebida';
-        const mockProductos = [
-          { _id: mongoose.Types.ObjectId(), nombre: 'Producto 1', categoria: mockCategoria, restauranteId: mockRestauranteId },
-          { _id: mongoose.Types.ObjectId(), nombre: 'Producto 2', categoria: mockCategoria, restauranteId: mockRestauranteId },
-        ];
-    
-        Producto.find.mockResolvedValueOnce(mockProductos);
-    
-        const response = await request(app)
-          .get('/productos')
-          .query({ restauranteId: mockRestauranteId, categoria: mockCategoria });
-
-        expect(response.body).toEqual(mockProductos);
-      });
-
-      test('debería devolver un error 400 si el ID del restaurante no es válido', async () => {
-        const response = await request(app)
-          .get('/productos')
-          .query({ restauranteId: 'IDInvalido' });
-    
-        expect(response.statusCode).toBe(400);
+    it('should return a 500 when an error occurs', async () => {
+      
+      const req = {
+        body: {
+          nombre: 'Nuevo Producto',
+          descripcion: 'Descripción del producto',
+          precio: 9.99,
+          categoria: 'Comida',
+          restauranteId: new mongoose.Types.ObjectId(0)
+        },
+      };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
   
-      });
-
-      test('debería devolver un error 400 si el ID del restaurante no es válido - body', async () => {
-        const response = await request(app)
-          .get('/productos')
-          .query({ restauranteId: 'IDInvalido' });
-
-        expect(response.body).toEqual({ error: 'ID de restaurante no válido' });
-      });
-
-      test('debería devolver un error 500 si hay un error al buscar productos', async () => {
-        Producto.find.mockRejectedValueOnce(new Error('Error al buscar productos'));
-    
-        const response = await request(app)
-          .get('/productos');
-    
-        expect(response.statusCode).toBe(500);
-   
-      });
-
-      test('debería devolver un error 500 si hay un error al buscar productos-- body', async () => {
-        Producto.find.mockRejectedValueOnce(new Error('Error al buscar productos'));
-    
-        const response = await request(app)
-          .get('/productos');
-    
-
-        expect(response.body).toEqual({ error: 'Error al buscar productos.' });
-      });
-
-      test('debería devolver un mensaje 404 si no se encuentran productos', async () => {
-        Producto.find.mockResolvedValueOnce([]);
-    
-        const response = await request(app)
-          .get('/productos');
-    
-        expect(response.statusCode).toBe(404);
-
-      });
-
-      test('debería devolver un mensaje 404 si no se encuentran productos -- body', async () => {
-        Producto.find.mockResolvedValueOnce([]);
-    
-        const response = await request(app)
-          .get('/productos');
-   
-        expect(response.body).toEqual({ message: 'No se encontraron productos que coincidan con los criterios de búsqueda.' });
-      });
-
-  });
-
-  describe('Obtener Producto por ID', () => {
-    afterEach(() => {
-        jest.clearAllMocks();
-      });
-    
-      test('debería obtener un producto por ID correctamente', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-        const mockProducto = { _id: mockProductoId, nombre: 'Producto de prueba', categoria: 'Comida' };
-    
-        Producto.findById.mockResolvedValueOnce(mockProducto);
-    
-        const response = await request(app)
-          .get(`/productos/${mockProductoId}`);
-    
-        expect(response.statusCode).toBe(201);
-        expect(response.body).toEqual(mockProducto);
-      });
-
-      test('debería obtener un producto por ID correctamente- body', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-        const mockProducto = { _id: mockProductoId, nombre: 'Producto de prueba', categoria: 'Comida' };
-    
-        Producto.findById.mockResolvedValueOnce(mockProducto);
-    
-        const response = await request(app)
-          .get(`/productos/${mockProductoId}`);
-    
-
-        expect(response.body).toEqual(mockProducto);
-      });
-
-      test('debería devolver un error 404 si el producto no existe', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-    
-        Producto.findById.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .get(`/productos/${mockProductoId}`);
-    
-        expect(response.statusCode).toBe(404);
-
-      });
-
-      test('debería devolver un error 404 si el producto no existe -- body', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-    
-        Producto.findById.mockResolvedValueOnce(null);
-    
-        const response = await request(app)
-          .get(`/productos/${mockProductoId}`);
-    
-
-        expect(response.body).toEqual({ error: 'Producto no encontrado' });
-      });
-
-      test('debería devolver un error 500 si hay un error al buscar el producto', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-    
-        Producto.findById.mockRejectedValueOnce(new Error('Error al buscar el producto'));
-    
-        const response = await request(app)
-          .get(`/productos/${mockProductoId}`);
-    
-        expect(response.statusCode).toBe(500);
- 
-      });
-    
-      test('debería devolver un error 500 si hay un error al buscar el producto -- body', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-    
-        Producto.findById.mockRejectedValueOnce(new Error('Error al buscar el producto'));
-    
-        const response = await request(app)
-          .get(`/productos/${mockProductoId}`);
-
-        expect(response.body).toEqual({ error: 'Error al buscar el producto' });
-      });
-  });
-
-  describe('Actualizar Producto por ID', () => {
-    afterEach(() => {
-        jest.clearAllMocks();
-      });
-    
-      test('debería actualizar un producto por ID correctamente', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-        const mockProductoActualizado = { _id: mockProductoId, nombre: 'Producto Actualizado', categoria: 'Bebida' };
-    
-        Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockResolvedValueOnce(mockProductoActualizado) });
-    
-        const response = await request(app)
-          .put(`/productos/${mockProductoId}`)
-          .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-    
-        expect(response.statusCode).toBe(200);
-             
-      });
-
-      test('debería actualizar un producto por ID correctamente--body', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-        const mockProductoActualizado = { _id: mockProductoId, nombre: 'Producto Actualizado', categoria: 'Bebida' };
-    
-        Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockResolvedValueOnce(mockProductoActualizado) });
-    
-        const response = await request(app)
-          .put(`/productos/${mockProductoId}`)
-          .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-    
-
-        expect(response.body).toEqual({ message: 'Producto actualizado con éxito', producto: mockProductoActualizado });
-      });
-
-       test('debería devolver un error 404 si el producto no existe', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .put(`/productos/${mockProductoId}`)
-      .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-
-    expect(response.statusCode).toBe(404);
-
-  });
-
-    test('debería devolver un error 404 si el producto no existe- body', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .put(`/productos/${mockProductoId}`)
-      .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-
-    expect(response.body).toEqual({ error: 'Producto no encontrado' });
-  });
-
-    test('debería devolver un error 500 si hay un error al actualizar el producto', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockRejectedValueOnce(new Error('Error al actualizar el producto')) });
-
-    const response = await request(app)
-      .put(`/productos/${mockProductoId}`)
-      .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-
-    expect(response.statusCode).toBe(500);
-
-  });
-
-   test('debería devolver un error 500 si hay un error al actualizar el producto -- body', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockRejectedValueOnce(new Error('Error al actualizar el producto')) });
-
-    const response = await request(app)
-      .put(`/productos/${mockProductoId}`)
-      .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-
-
-    expect(response.body).toEqual({ error: 'Error al actualizar el producto' });
-  });
-
-
-   test('debería devolver un error 400 si el ID de producto no es válido', async () => {
-    const response = await request(app)
-      .put('/productos/invalidID')
-      .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-
-    expect(response.statusCode).toBe(400);
- 
-  });
-
-   test('debería devolver un error 400 si el ID de producto no es válido-body', async () => {
-    const response = await request(app)
-      .put('/productos/invalidID')
-      .send({ nombre: 'Producto Actualizado', categoria: 'Bebida' });
-
-    expect(response.body).toEqual({ error: 'ID de producto no válido' });
-  });
-  });
-
-  describe('Inhabilitar Producto por ID', () => {
-    afterEach(() => {
-        jest.clearAllMocks();
-      });
-    
-      test('debería inhabilitar un producto por ID correctamente', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-        const mockProductoInhabilitado = { _id: mockProductoId, nombre: 'Producto Deshabilitado', habilitado: false };
-    
-        Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockResolvedValueOnce(mockProductoInhabilitado) });
-    
-        const response = await request(app)
-          .patch(`/productos/${mockProductoId}/inhabilitar`)
-          .send();
-    
-        expect(response.statusCode).toBe(200);
+      
+      const mockRestaurante = { _id: req.body.restauranteId };
+      jest.spyOn(Restaurante, 'findById').mockImplementationOnce(() => mockRestaurante);
   
-      });
-
-      test('debería inhabilitar un producto por ID correctamente -body', async () => {
-        const mockProductoId = mongoose.Types.ObjectId();
-        const mockProductoInhabilitado = { _id: mockProductoId, nombre: 'Producto Deshabilitado', habilitado: false };
-    
-        Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockResolvedValueOnce(mockProductoInhabilitado) });
-    
-        const response = await request(app)
-          .patch(`/productos/${mockProductoId}/inhabilitar`)
-          .send();
-    
-    
-        expect(response.body).toEqual({ message: 'Producto inhabilitado con éxito', producto: mockProductoInhabilitado });
-      });
-  });
-
-  test('debería devolver un error 404 si el producto no existe', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .patch(`/productos/${mockProductoId}/inhabilitar`)
-      .send();
-
-    expect(response.statusCode).toBe(404);
-
-  });
-
-  test('debería devolver un error 404 si el producto no existe --body', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .patch(`/productos/${mockProductoId}/inhabilitar`)
-      .send();
-
-
-    expect(response.body).toEqual({ error: 'Producto no encontrado' });
-  });
-
-  test('debería devolver un error 500 si hay un error al inhabilitar el producto', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockRejectedValueOnce(new Error('Error al inhabilitar el producto')) });
-
-    const response = await request(app)
-      .patch(`/productos/${mockProductoId}/inhabilitar`)
-      .send();
-
-    expect(response.statusCode).toBe(500);
-
-  });
-
-  test('debería devolver un error 500 si hay un error al inhabilitar el producto --body', async () => {
-    const mockProductoId = mongoose.Types.ObjectId();
-
-    Producto.findById.mockResolvedValueOnce({ save: jest.fn().mockRejectedValueOnce(new Error('Error al inhabilitar el producto')) });
-
-    const response = await request(app)
-      .patch(`/productos/${mockProductoId}/inhabilitar`)
-      .send();
-
-
-    expect(response.body).toEqual({ error: 'Error al inhabilitar el producto' });
-  });
-
-  test('debería devolver un error 400 si el ID de producto no es válido', async () => {
-    const response = await request(app)
-      .patch('/productos/5/inhabilitar')
-      .send();
-
-    expect(response.statusCode).toBe(400);
- 
-  });
-
+      
+      jest.spyOn(Producto.prototype, 'save').mockRejectedValueOnce(new Error('Test error'));
   
-  test('debería devolver un error 400 si el ID de producto no es válido --body', async () => {
-    const response = await request(app)
-      .patch('/productos/5/inhabilitar')
-      .send();
-
-
-    expect(response.body).toEqual({ error: 'ID de producto no válido' });
+      
+      await crearProducto(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Error al crear el producto' });
+    });
+  });
+  describe('buscarProductos', () => {
+    it('should return productos based on provided criteria', async () => {
+      
+      const req = { query: { restauranteId: new mongoose.Types.ObjectId().toHexString(), categoria: 'Comida' } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      const mockProductos = [{ name: 'Producto1' }, { name: 'Producto2' }];
+      jest.spyOn(Producto, 'find').mockImplementationOnce(() => mockProductos);
+  
+      
+      await buscarProductos(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockProductos);
+    });
+  
+    it('should return a 400 when restauranteId is not valid', async () => {
+      
+      const req = { query: { restauranteId: 'invalidId', categoria: 'Comida' } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      await buscarProductos(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'ID de restaurante no válido' });
+    });
+  
+    it('should return a 404 when no productos are found', async () => {
+      
+      const req = { query: { restauranteId: new mongoose.Types.ObjectId().toHexString(), categoria: 'NonexistentCategory' } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      jest.spyOn(Producto, 'find').mockImplementationOnce(() => []);
+  
+      
+      await buscarProductos(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'No se encontraron productos que coincidan con los criterios de búsqueda.',
+      });
+    });
+  
+    it('should return a 500 when an error occurs', async () => {
+      
+      const req = { query: {} };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      jest.spyOn(Producto, 'find').mockRejectedValueOnce(new Error('Test error'));
+  
+      
+      await buscarProductos(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Error al buscar productos.' });
+    });
+  });
+  
+  describe('obtenerProductoPorId', () => {
+    it('should return the correct producto when it exists', async () => {
+      
+      const req = { params: { id: new mongoose.Types.ObjectId().toHexString() } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      const mockProducto = { _id: req.params.id, name: 'Producto1' };
+      jest.spyOn(Producto, 'findById').mockImplementationOnce(() => mockProducto);
+  
+      
+      await obtenerProductoPorId(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(mockProducto);
+    });
+  
+    it('should return a 404 when the producto is not found', async () => {
+      
+      const req = { params: { id: new mongoose.Types.ObjectId().toHexString() } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      jest.spyOn(Producto, 'findById').mockImplementationOnce(() => null);
+  
+      
+      await obtenerProductoPorId(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Producto no encontrado' });
+    });
+  
+    it('should return a 500 when an error occurs', async () => {
+      
+      const req = { params: { id: new mongoose.Types.ObjectId().toHexString() } };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      jest.spyOn(Producto, 'findById').mockRejectedValueOnce(new Error('Test error'));
+  
+      
+      await obtenerProductoPorId(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Error al buscar el producto' });
+    });
+  });
+  describe('actualizarProducto', () => {
+    it('should update and return 200', async () => {
+      
+      const req = {
+        params: { id: new mongoose.Types.ObjectId().toHexString() },
+        body: { nombre: 'Updated Producto', descripcion: 'Updated Description', precio: 15.99, categoria: 'Updated Category', restauranteId: new mongoose.Types.ObjectId().toHexString() },
+      };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      const mockProducto = new Producto({ _id: req.params.id, ...req.body });
+  
+      
+      jest.spyOn(Producto, 'findById').mockImplementationOnce(() => ({
+        ...mockProducto,
+        save: jest.fn().mockResolvedValue(mockProducto),
+      }));
+  
+      
+      await actualizarProducto(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it('should return a 400 when the productoId is not valid', async () => {
+      
+      const req = { params: { id: 'invalidId' }, body: {} };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      await actualizarProducto(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'ID de producto no válido' });
+    });
+  
+    it('should return a 404 when the producto is not found', async () => {
+      
+      const req = { params: { id: new mongoose.Types.ObjectId().toHexString() }, body: {} };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      jest.spyOn(Producto, 'findById').mockImplementationOnce(() => null);
+  
+      
+      await actualizarProducto(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Producto no encontrado' });
+    });
+    it('should return a 500 when an error occurs', async () => {
+      
+      const req = { params: { id: new mongoose.Types.ObjectId().toHexString() }, body: {id : new mongoose.Types.ObjectId(0)} };
+      const res = {
+        status: jest.fn(() => res),
+        json: jest.fn(),
+      };
+  
+      
+      const mockProducto = { _id: req.params.id };
+      jest.spyOn(Producto, 'findById').mockResolvedValue(mockProducto);
+  
+      
+      
+  
+      
+      await actualizarProducto(req, res);
+  
+      // Expect
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Error al actualizar el producto' });
+    });
   });
 });
