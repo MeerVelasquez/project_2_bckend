@@ -132,28 +132,21 @@ const {  isAdmin,
     return res.status(500).json({ error: 'Error al actualizar el usuario' });
   }
 }
-// DELETE inhabilitar usuario.
+// DELETE eliminar un usuario.
   async function inhabilitarUsuario (req, res)  {
   const usuarioId = req.params.id;
-
   try {
     // Verificar si el usuario con el ID proporcionado existe en la base de datos
-    const usuario = await Usuario.findById(usuarioId);
+    const usuario = await Usuario.findByIdAndDelete(usuarioId);
 
     if (!usuario) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // Cambiar la propiedad "habilitado" a false
-    usuario.habilitado = false;
-
-    // Guardar el usuario actualizado
-    await usuario.save();
-
-    return res.json({ message: 'Usuario deshabilitado con éxito' });
+    return res.json({ message: 'Usuario eliminado con éxito' });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Error al deshabilitar el usuario' });
+    return res.status(500).json({ error: 'Error al eliminar el usuario' });
   }
 }
 async function generate2FAKey(req, res) {
@@ -162,17 +155,17 @@ async function generate2FAKey(req, res) {
   try {
     // Ensure userId is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: 'Invalid userId' });
+      return res.status(400).json({ error: 'Id de usuario invalida' });
     }
 
-    // Call the function to generate the 2FA secret
+    // Habilitar 2FA
     const result = await generateAndEnableTwoFactor(userId);
 
-    // Send the response with the generated secret and updated user details
+    // Enviar resultados
     res.json(result);
   } catch (error) {
-    console.error('Error generating 2FA secret:', error);
-    res.status(500).json({ error: 'Error generating 2FA secret' });
+    console.error('Error al generar secreto 2FA:', error);
+    res.status(500).json({ error: 'Error al generar secreto 2FA' });
   }
 }
 module.exports = {

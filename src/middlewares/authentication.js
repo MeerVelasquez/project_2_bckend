@@ -69,21 +69,47 @@ const Skey = 'ojoazul'
     }
   };
 // Middleware de revisar si el usuario es admin
-  const isAdmin = async (req, res, next) => {
+
+const isAdmin = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization');
+    console.log(token);
+    if (!token || !token.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Formato de token no válido' });
+    }
+    
+    const tokenValue = token.split(' ')[1];
+    console.log(tokenValue)
     try {
-      const userId = req.user.userId;
-      const user = await Usuario.findById(userId);
-  
+      // Verify the token and decode the payload
+      const decoded = jwt.verify(tokenValue, Skey);
+      console.log(decoded);
+      // Buscar usuario por id para saber si es administrador
+      const user = await Usuario.findById(decoded.userId);
+
       if (!user || user.rol !== 'admin') {
         return res.status(403).json({ error: 'No tienes permisos de administrador' });
       }
-  
+
       next();
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return res.status(500).json({ error: 'Error checking admin status' });
+    } catch (jwtError) {
+      if (jwtError instanceof jwt.JsonWebTokenError) {
+        // Invalid token
+        return res.status(401).json({ error: 'Token inválido' });
+      } else if (jwtError instanceof jwt.TokenExpiredError) {
+        // Token expired
+        return res.status(401).json({ error: 'Token expirado' });
+      } else {
+        // En otros casos de error de JWT
+        throw jwtError;
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return res.status(500).json({ error: 'Error checking admin status' });
+  }
+};
+
 // Función para generar el token JWT
   const generateToken = (userId) => {
   const token = jwt.sign({ userId }, Skey, { expiresIn: '1h' }); 

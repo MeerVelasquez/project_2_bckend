@@ -21,7 +21,8 @@ routerProducto.get('/busqueda', buscarProductos);
 routerProducto.put('/:id', authenticateJWT, actualizarProducto);
 
   // DELETE deshabilita un restaurante basado en la id proveída.
-routerProducto.patch('/:id/inhabilitar', authenticateJWT, inhabilitarProducto);
+routerProducto.delete('/:id', authenticateJWT, inhabilitarProducto);
+
 // UPDATE modifica los datos del producto que corresponde a la id proveída, usando los datos proveídos
 routerProducto.put('/:id',  authenticateJWT);
 

@@ -111,8 +111,8 @@ const mongoose = require('mongoose');
   }
 }
 
-// PATCH deshabilita un producto based en la ID proveída
-  async function inhabilitarProducto(req, res) {
+// DELETE un producto basado en la ID proveída
+async function inhabilitarProducto(req, res) {
   try {
     const productoId = req.params.id;
 
@@ -120,19 +120,17 @@ const mongoose = require('mongoose');
       return res.status(400).json({ error: 'ID de producto no válido' });
     }
 
-    const producto = await Producto.findById(productoId);
+    const producto = await Producto.findByIdAndDelete(productoId);
     if (!producto) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    producto.habilitado = false;
+    // Remove "inhabilitar" logic
 
-    await producto.save();
-
-    return res.status(200).json({ message: 'Producto inhabilitado con éxito', producto });
+    return res.status(200).json({ message: 'Producto eliminado con éxito' });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Error al inhabilitar el producto' });
+    return res.status(500).json({ error: 'Error al eliminar el producto' });
   }
 }
 module.exports ={

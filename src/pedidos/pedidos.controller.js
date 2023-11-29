@@ -1,4 +1,5 @@
 const Pedido = require('./pedidos.model.js'); 
+
 const mongoose = require('mongoose');
 // CREATE un pedido
   async function crearPedido(req, res) {
@@ -122,7 +123,7 @@ const mongoose = require('mongoose');
     const pedidoId = req.params.id;
 
     // Buscar el pedido en la base de datos por su ID
-    const pedido = await Pedido.findById(pedidoId);
+    const pedido = await Pedido.findByIdAndRemove(pedidoId);
 
     if (!pedido) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
@@ -134,11 +135,12 @@ const mongoose = require('mongoose');
     // Guardar el pedido "inhabilitado" en la base de datos
     await pedido.save();
 
-    res.status(200).json({ mensaje: 'Pedido inhabilitado exitosamente' });
+    res.status(200).json({ mensaje: 'Pedido eliminado exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al inhabilitar el pedido' });
+    res.status(500).json({ error: 'Error al eliminar el pedido' });
   }
 }
+
 module.exports = {
   crearPedido,
   obtenerPedidosFiltrados,

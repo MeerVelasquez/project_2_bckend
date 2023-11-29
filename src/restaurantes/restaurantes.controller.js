@@ -26,7 +26,8 @@ const Restaurante = require('../restaurantes/restaurantes.model'); // Adjust the
   try {
     const { categoria, nombre } = req.query;
     let query = {};
-
+    console.log(categoria);
+    console.log(nombre)
     if (categoria) {
       query.categoria = { $regex: new RegExp(`.*${categoria}.*`, 'i') };
     }
@@ -91,21 +92,20 @@ const Restaurante = require('../restaurantes/restaurantes.model'); // Adjust the
   }
 }
 
-// PATCH deshabilita un restaurante based en la ID proveída
- async function deshabilitarRestaurante(req, res) {
+// DELETE borra un  restaurante
+async function deshabilitarRestaurante(req, res) {
   const restauranteId = req.params.id;
   try {
-    const restaurante = await Restaurante.findById(restauranteId);
+    const restaurante = await Restaurante.findByIdAndDelete(restauranteId);
     if (!restaurante) {
       return res.status(404).json({ error: 'Restaurante no encontrado' });
     }
-
-    restaurante.habilitado = false;
-    await restaurante.save();
-    return res.json({ message: `Restaurante deshabilitado con éxito` });
+    
+    return res.json({ message: `Restaurante eliminado con éxito` });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Error al deshabilitar el restaurante' });
+    return res.status(500).json({ error: 'Error al eliminar el restaurante' });
   }
 }
+
 module.exports = { crearRestaurante, buscarRestaurantes, obtenerRestaurantePorId, actualizarRestaurante, deshabilitarRestaurante };

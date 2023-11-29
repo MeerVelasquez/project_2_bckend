@@ -15,7 +15,9 @@ routerRestaurante.get('/:id', obtenerRestaurantePorId);
 routerRestaurante.put('/:id', authenticateJWT, actualizarRestaurante);
 
 // PATCH deshabilita un restaurante based en la ID proveída
-routerRestaurante.patch('/:id/deshabilitar', authenticateJWT, deshabilitarRestaurante);
+// Change to DELETE and remove "inhabilitar"
+routerRestaurante.delete('/:id', authenticateJWT, deshabilitarRestaurante);
+
 
 module.exports = routerRestaurante;
 
